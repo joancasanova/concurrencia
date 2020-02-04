@@ -41,13 +41,13 @@ public class CC_01_Threads {
          * El metodo run, heredado de la clase abstacta Thread, implementa la tarea concurrente
          */
         public void run() {
-            System.out.println("Hola, soy el esclavo numero " + numero_proceso + ". Esta es mi primera linea");
+            System.out.println("Hola, soy el esclavo " + numero_proceso + ". Esta es mi primera linea");
             try {
                 Thread.sleep(tiempo_dormir);
             } catch (InterruptedException e) {
                 e.printStackTrace(); // Ha ocurrido una interrupcion
             }
-            System.out.println("Ya he dormido, soy el esclavo numero " + numero_proceso + ". Esta es mi segunda linea");
+            System.out.println("Ya he dormido, soy el esclavo " + numero_proceso + ". Esta es mi segunda linea");
         }
     }
     
@@ -66,11 +66,12 @@ public class CC_01_Threads {
         // Obtener el tiempo a dormir para cada Thread
         // Crear los Threads y guardarlos en el array
         for (int i = 0; i < numero_threads; i++) {
-            System.out.println("Introduce el tiempo para dormir del esclavo numero " + (i+1) + " (en milisegundos):");
+            System.out.println("Introduce el tiempo para dormir del esclavo " + (i+1) + " (en milisegundos):");
             int tiempo_dormir = scanner.nextInt();
-            esclavos[i] = new Esclavo(i+1, tiempo_dormir);
             System.out.println();
+            esclavos[i] = new Esclavo(i+1, tiempo_dormir);
         }
+
         scanner.close();
 
         // Ejecutar los metodos run de forma concurrente
@@ -83,6 +84,6 @@ public class CC_01_Threads {
             esclavo.join();
         }
 
-        System.out.println("\nTodos los Threads han terminado su ejecución");
+        System.out.println("\nTodos los esclavos han terminado su tarea");
     }
 }
