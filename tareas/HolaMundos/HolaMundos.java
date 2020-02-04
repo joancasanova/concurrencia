@@ -1,8 +1,8 @@
 /**
  * Primer programa concurrente
  * 
- * Concurrencia
  * Universidad Politecnica de Madrid
+ * Concurrencia
  * Autor: Juan Francisco Casanova Ferrer
  * github: https://github.com/joancasanova
  */
