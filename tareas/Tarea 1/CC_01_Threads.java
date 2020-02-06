@@ -41,13 +41,13 @@ public class CC_01_Threads {
          * El metodo run, heredado de la clase abstacta Thread, implementa la tarea concurrente
          */
         public void run() {
-            System.out.println("Hola, soy el esclavo " + numero_proceso + ". Esta es mi primera linea");
+            System.out.format("\nHola, soy el esclavo %d. Esta es mi primera linea", numero_proceso);
             try {
                 Thread.sleep(tiempo_dormir);
             } catch (InterruptedException e) {
                 e.printStackTrace(); // Ha ocurrido una interrupcion
             }
-            System.out.println("Ya he dormido, soy el esclavo " + numero_proceso + ". Esta es mi segunda linea");
+            System.out.format("\nYa he dormido, soy el esclavo %d otra vez. Han pasado %d milisegundos", numero_proceso, tiempo_dormir);
         }
     }
     
@@ -76,6 +76,6 @@ public class CC_01_Threads {
             esclavo.join();
         }
 
-        System.out.println("\nTodos los esclavos han terminado su tarea");
+        System.out.println("\n\nTodos los esclavos han terminado su tarea");
     }
 }
