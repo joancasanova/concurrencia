@@ -21,7 +21,7 @@
  * github: https://github.com/joancasanova
  */
 
-import java.util.Scanner;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CC_01_Threads {
 
@@ -53,26 +53,18 @@ public class CC_01_Threads {
     
     public static void main(String[] args) throws InterruptedException {
 
-        Scanner scanner = new Scanner(System.in);
-
-        // Obtener el numero de Threads a ejecutar
-        System.out.println("\nIntroduce el numero de esclavos: ");
-        int numero_threads = scanner.nextInt();
-        System.out.println();
+        // Obtener el numero de Threads de forma aleatoria
+        int numero_esclavos = ThreadLocalRandom.current().nextInt(15);
 
         // Crear array para guardar los Threads a ejecutar
-        Esclavo[] esclavos = new Esclavo[numero_threads];
+        Esclavo[] esclavos = new Esclavo[numero_esclavos];
 
         // Obtener el tiempo a dormir para cada Thread
         // Crear los Threads y guardarlos en el array
-        for (int i = 0; i < numero_threads; i++) {
-            System.out.println("Introduce el tiempo para dormir del esclavo " + (i+1) + " (en milisegundos):");
-            int tiempo_dormir = scanner.nextInt();
-            System.out.println();
+        for (int i = 0; i < numero_esclavos; i++) {
+            int tiempo_dormir = ThreadLocalRandom.current().nextInt(15000);
             esclavos[i] = new Esclavo(i+1, tiempo_dormir);
         }
-
-        scanner.close();
 
         // Ejecutar los metodos run de forma concurrente
         for (Esclavo esclavo : esclavos) {
