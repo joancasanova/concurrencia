@@ -31,8 +31,14 @@ public class CC_02_Carrera {
      * Decrementador
      */
     private static class Dec extends Thread {
+        private int iteraciones;
+        public Dec (int iteraciones) {
+            this.iteraciones = iteraciones;
+        }
         public void run() {
-            n--;
+            for(int i = 0; i < iteraciones; i++) {
+                n--;
+            }
         }
     }
 
@@ -40,31 +46,38 @@ public class CC_02_Carrera {
      * Incrementador
      */
     private static class Inc extends Thread {
+        private int iteraciones;
+        public Inc (int iteraciones) {
+            this.iteraciones = iteraciones;
+        }
         public void run() {
-            n++;
+            for(int i = 0; i < iteraciones; i++) {
+                n++;
+            }
         }
     }
     
     public static void main(String[] args) throws InterruptedException {
 
         // Obtener el numero de Incrementadores y Decrementadores
-        int numero_operaciones = ThreadLocalRandom.current().nextInt(100000);
+        int numero_threads = ThreadLocalRandom.current().nextInt(10000);
+        int numero_iteraciones = ThreadLocalRandom.current().nextInt(1000);
 
-        System.out.format("\nSe realizarán %d incrementos y decrementos\n", numero_operaciones);
+        System.out.format("\nSe realizarán %d incrementos y decrementos\n", numero_threads);
 
-        Dec[] decrementos = new Dec[numero_operaciones];
-        Inc[] incrementos = new Inc[numero_operaciones];
+        Dec[] decrementos = new Dec[numero_threads];
+        Inc[] incrementos = new Inc[numero_threads];
 
         // Ejecutar los metodos run de forma concurrente
-        for (int i = 0; i < numero_operaciones; i++) {
-            decrementos[i] = new Dec();
-            incrementos[i] = new Inc();
+        for (int i = 0; i < numero_threads; i++) {
+            decrementos[i] = new Dec(numero_iteraciones);
+            incrementos[i] = new Inc(numero_iteraciones);
             decrementos[i].start();
             incrementos[i].start();
         }
 
         // Esperar a que se han terminado de ejecutar todos los Threads
-        for (int i = 0; i < numero_operaciones; i++) {
+        for (int i = 0; i < numero_threads; i++) {
             decrementos[i].join();
             incrementos[i].join();
         }
