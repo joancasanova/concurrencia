@@ -34,10 +34,14 @@ class CC_04_MutexSem {
          return this.n;
       }
       public void inc () {
+			s.await();
          this.n++;
+			s.signal();
       }
       public void dec () {
+			s.await();
          this.n--;
+			s.signal();
       }
    }	
 
@@ -48,9 +52,7 @@ class CC_04_MutexSem {
       }
       public void run() {
          for (int i = 0; i < N_PASOS; i++) {
-			s.await();
             this.cont.inc();
-			s.signal();
          }
       }
    }
@@ -62,9 +64,7 @@ class CC_04_MutexSem {
       }
       public void run() {
          for (int i = 0; i < N_PASOS; i++) {
-			s.await();
             this.cont.dec();
-			s.signal();
          }
       }
    }
