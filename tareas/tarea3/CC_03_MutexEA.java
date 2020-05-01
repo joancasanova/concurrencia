@@ -19,6 +19,7 @@
  * Autor: Juan Francisco Casanova Ferrer
  * github: https://github.com/joancasanova
  */
+package tareas.tarea3;
 
 class CC_03_MutexEA {
    static final int N_PASOS = 10000;

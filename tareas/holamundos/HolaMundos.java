@@ -6,6 +6,7 @@
  * Autor: Juan Francisco Casanova Ferrer
  * github: https://github.com/joancasanova
  */
+package tareas.holamundos;
 
 import java.util.Scanner; 
 public class HolaMundos {

@@ -1,5 +1,5 @@
 /**
- * Tercera tarea evaluable - Garantizar exclusión mutua con espera activa
+ * Cuarta tarea evaluable - Garantizar exclusión mutua con semaforos
  * 
  * Este ejercicio, al igual que el anterior, consiste en evitar una condición de carrera. En es-
  * ta ocasión tenemos el mismo número de procesos incrementadores que decrementadores que
@@ -17,15 +17,16 @@
  * Autor: Juan Francisco Casanova Ferrer
  * github: https://github.com/joancasanova
  */
+package tareas.tarea4;
 
 import es.upm.babel.cclib.Semaphore;
 
 class CC_04_MutexSem {
    private static int N_THREADS = 2;
    private static int N_PASOS = 1000000;
-   private static Semaphore s = new Semaphore(1);
 
    static class Contador {
+      private static Semaphore s = new Semaphore(1);
       private volatile int n;
       public Contador() {
          this.n = 0;

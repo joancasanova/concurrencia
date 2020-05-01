@@ -21,6 +21,7 @@
  * Autor: Juan Francisco Casanova Ferrer
  * github: https://github.com/joancasanova
  */
+package tareas.tarea2;
 
 import java.util.concurrent.ThreadLocalRandom;
 
