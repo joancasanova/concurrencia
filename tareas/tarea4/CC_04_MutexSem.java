@@ -35,9 +35,9 @@ class CC_04_MutexSem {
          return this.n;
       }
       public void inc () {
-			s.await();
+         s.await();
          this.n++;
-			s.signal();
+         s.signal();
       }
       public void dec () {
 			s.await();
