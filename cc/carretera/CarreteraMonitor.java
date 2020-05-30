@@ -14,19 +14,19 @@ public class CarreteraMonitor implements Carretera {
   private final int carriles;
 
   // Matriz que guarda los carriles ocupados
-  private final boolean[][] carriles_ocupados;
+  private final boolean[][] carrilesOcupados;
 
   // Mapa que guarda el nombre del coche y su estado actual en la carretera (posición, ticks, y si está bloqueado mientras circula)
-  private final Map<String, EstadoCoche> automoviles;
+  private final Map<String, EstadoCoche> coches;
 
   // Monitor para la exclusión mutua
   private final Monitor mutex;
 
   // Condiciones para avanzar de segmento
-  private final Monitor.Cond[] condiciones_avanzar;
+  private final Monitor.Cond[] condicionesAvanzar;
 
   // Condicion para que un coche circule inmediatamente despues de alcanzar los 0 ticks
-  private final Monitor.Cond sincronizar_circular_tick;
+  private final Monitor.Cond sincronizarCircularTick;
 
   /**
    * Constructor.
@@ -40,29 +40,29 @@ public class CarreteraMonitor implements Carretera {
 
     // En la matriz de carriles ocupados ignoramos la posicion 0
     // Esto es poque los carriles y segmentos empiezan a contar por el numero 1
-    this.carriles_ocupados = new boolean[segmentos + 1][carriles + 1];
+    this.carrilesOcupados = new boolean[segmentos + 1][carriles + 1];
 
-    // Inicializar mapa de automoviles
-    this.automoviles = new HashMap<>();
+    // Inicializar mapa de coches
+    this.coches = new HashMap<>();
 
     // Inicializar monitor
     this.mutex = new Monitor();
 
     // Necesitamos una cola de condicion por cada segmento de la carretera
-    this.condiciones_avanzar = new Monitor.Cond[segmentos + 1];
+    this.condicionesAvanzar = new Monitor.Cond[segmentos + 1];
     for (int i = 0; i < segmentos + 1; i++) {
-      condiciones_avanzar[i] = mutex.newCond();
+      condicionesAvanzar[i] = mutex.newCond();
     }
 
     // Inicializar condicion para sincronizar el metodo tick y circulando
-    sincronizar_circular_tick = mutex.newCond();
+    sincronizarCircularTick = mutex.newCond();
   }
 
   /**
    * El coche entra en la carretera si hay hueco.
    *
    * @param id identificador del coche
-   * @param tks número de ticks necearios para atravesar un segmento (velocidad)
+   * @param tks número de ticks necesarios para atravesar un segmento (velocidad)
    *
    * @return La posicion en la que entra el coche.
    */
@@ -72,20 +72,20 @@ public class CarreteraMonitor implements Carretera {
 
     // Si no hay hueco en el primer carril, esperamos
     if (CarrilLibre(1) == 0) {
-      condiciones_avanzar[1].await();
+      condicionesAvanzar[1].await();
     }
 
     // Comprobamos cual es el carril libre y asignamos la nueva posicion al coche
-    int carril_libre = CarrilLibre(1);
-    Pos posicion = new Pos(1, carril_libre);
+    int carrilLibre = CarrilLibre(1);
+    Pos posicion = new Pos(1, carrilLibre);
 
     // Asignamos un monitor al coche para bloquearlo cuando este circulando
     Monitor.Cond bloqueado = mutex.newCond();
 
     // Introducimos el coche en la carretera
     EstadoCoche estado = new EstadoCoche(posicion, tks, bloqueado);
-    automoviles.put(id, estado);
-    carriles_ocupados[1][carril_libre] = true;
+    coches.put(id, estado);
+    carrilesOcupados[1][carrilLibre] = true;
 
     // Salida de la zona de exclusion mutua
     mutex.leave();
@@ -97,7 +97,7 @@ public class CarreteraMonitor implements Carretera {
    * El coche avanza al siguiente segmento si hay hueco.
    *
    * @param id identificador del coche
-   * @param tks número de ticks necearios para atravesar un segmento (velocidad)
+   * @param tks número de ticks necesarios para atravesar un segmento (velocidad)
    *
    * @return La siguiente posicion del coche.
    */
@@ -106,23 +106,23 @@ public class CarreteraMonitor implements Carretera {
     mutex.enter();
 
     // Si no hay hueco en el siguiente carril, esperamos
-    int siguiente_segmento = automoviles.get(id).getPosicion().getSegmento() + 1;
-    if (CarrilLibre(siguiente_segmento) == 0) {
-      condiciones_avanzar[siguiente_segmento].await();
+    int siguienteSegmento = coches.get(id).getPosicion().getSegmento() + 1;
+    if (CarrilLibre(siguienteSegmento) == 0) {
+      condicionesAvanzar[siguienteSegmento].await();
     }
 
     // Comprobamos cual es el carril libre y asignamos la nueva posicion al coche
-    int carril_libre = CarrilLibre(siguiente_segmento);
-    Pos posicion = new Pos(siguiente_segmento, carril_libre);
+    int carrilLibre = CarrilLibre(siguienteSegmento);
+    Pos posicion = new Pos(siguienteSegmento, carrilLibre);
 
     // Actualizamos el estado del coche en la carretera
-    automoviles.get(id).setPosicion(posicion);
-    automoviles.get(id).setTks(tks);
-    carriles_ocupados[siguiente_segmento][carril_libre] = true;
-    carriles_ocupados[siguiente_segmento - 1][carril_libre] = false;
+    coches.get(id).setPosicion(posicion);
+    coches.get(id).setTks(tks);
+    carrilesOcupados[siguienteSegmento][carrilLibre] = true;
+    carrilesOcupados[siguienteSegmento - 1][carrilLibre] = false;
 
     // Señalizamos que queda un huevo libre en el segmento actual
-    condiciones_avanzar[siguiente_segmento - 1].signal();
+    condicionesAvanzar[siguienteSegmento - 1].signal();
 
     // Salida de la zona de exclusion mutua
     mutex.leave();
@@ -140,13 +140,13 @@ public class CarreteraMonitor implements Carretera {
     mutex.enter();
 
     // Eliminamos al coche de la carretera
-    int segmento_actual = automoviles.get(id).getPosicion().getSegmento();
-    int carril_actual = automoviles.get(id).getPosicion().getCarril();
-    carriles_ocupados[segmento_actual][carril_actual] = false;
-    automoviles.remove(id);
+    int segmentoActual = coches.get(id).getPosicion().getSegmento();
+    int carrilActual = coches.get(id).getPosicion().getCarril();
+    carrilesOcupados[segmentoActual][carrilActual] = false;
+    coches.remove(id);
 
     // Señalizamos que queda un huevo libre en el ultimo segmento
-    condiciones_avanzar[segmento_actual].signal();
+    condicionesAvanzar[segmentoActual].signal();
 
     // Salida de la zona de exclusion mutua
     mutex.leave();
@@ -162,12 +162,12 @@ public class CarreteraMonitor implements Carretera {
     mutex.enter();
 
     // Si el numero de ticks del coche es mayor que cero, lo bloqueamos
-    if (automoviles.get(id).getTks() != 0) {
-      automoviles.get(id).getBloqueo().await();
+    if (coches.get(id).getTks() != 0) {
+      coches.get(id).getBloqueo().await();
     }
 
     // Señalamos que se ha completado la circulacion del coche
-    sincronizar_circular_tick.signal();
+    sincronizarCircularTick.signal();
 
     // Salida de la zona de exclusion mutua
     mutex.leave();
@@ -182,7 +182,7 @@ public class CarreteraMonitor implements Carretera {
     mutex.enter();
 
     // Para cada coche en la carretera
-    for (EstadoCoche coche : automoviles.values()) {
+    for (EstadoCoche coche : coches.values()) {
 
       // Si el coche tiene mas de 0 ticks
       if (coche.getTks() > 0) {
@@ -197,7 +197,7 @@ public class CarreteraMonitor implements Carretera {
           coche.getBloqueo().signal();
 
           // Esperamos a que complete la circulacion
-          sincronizar_circular_tick.await();
+          sincronizarCircularTick.await();
         }
       }
     }
@@ -211,16 +211,15 @@ public class CarreteraMonitor implements Carretera {
    *         Si no hay carril libre, devuelve 0.
    */
   private Integer CarrilLibre(Integer segmento) {
-    int carril_libre = 0;
+    int carrilLibre = 0;
     for (int carril = 1; carril <= carriles; carril++) {
-      if (!carriles_ocupados[segmento][carril]) {
-        carril_libre = carril;
+      if (!carrilesOcupados[segmento][carril]) {
+        carrilLibre = carril;
         break;
       }
     }
-    return carril_libre;
+    return carrilLibre;
   }
-
 
   /**
    * Clase que guarda el estado de un coche dentro de la carretera:

@@ -510,7 +510,7 @@ class Sim extends SwingWorker<Void,Object> {
     Carretera crPre = null;
 
     try {
-      crPre = new CarreteraMonitor(segmentos,carriles);
+      crPre = new CarreteraCSP(segmentos,carriles);
     } catch (Throwable exc) {
       String str =
         "\n*** Error: calling CarreteraMonitor("+segmentos+","+carriles+") raised the exception "+exc;
