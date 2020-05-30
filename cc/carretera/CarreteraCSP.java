@@ -1,11 +1,10 @@
 package cc.carretera;
 
 import org.jcsp.lang.*;
+import org.jcsp.net.Link;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
+import java.nio.file.attribute.UserPrincipalLookupService;
+import java.util.*;
 
 /**
  * Implementación del recurso compartido Carretera con paso de mensajes.
@@ -15,6 +14,7 @@ import java.util.Queue;
  */
 public class CarreteraCSP implements Carretera, CSProcess {
   // Configuración de la carretera
+  private final int segmentos;
   private final int carriles;
 
   // Matriz que guarda los carriles ocupados
@@ -39,6 +39,7 @@ public class CarreteraCSP implements Carretera, CSProcess {
    * @param carriles numero de carriles en la carretera.
    */
   public CarreteraCSP(int segmentos, int carriles) {
+    this.segmentos = segmentos;
     this.carriles = carriles;
 
     // En la matriz de carriles ocupados ignoramos la posicion 0
@@ -117,6 +118,13 @@ public class CarreteraCSP implements Carretera, CSProcess {
    * @param car identificador del coche
    */
   public void salir(String car) {
+
+    // Array que guarda los datos que enviamos en la peticion
+    // 0 --> null, porque aqui deberia ir el canal de respuesta y no es necesario para salir
+    // 1 --> nombre del coche
+    // 2 --> null, porque aquí deberían ir los ticks y no es necesario para salir
+    Object[] peticion = {null, car, null};
+
     // Enviamos la peticion para salir de la carretera al servidor
     canalSalir.out().write(car);
   }
@@ -167,46 +175,196 @@ public class CarreteraCSP implements Carretera, CSProcess {
     return carrilLibre;
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   /**
-   * Clase que guarda el estado de un coche dentro de la carretera:
-   * - Posicion: la posicion del coche en la carretera
-   * - Tks: numero de ticks que tiene el coche actualmente
+   * Metodo recursivo que hace avanzar a los coches que se encuentran en el segmento anterior.
+   *
+   * @param siguienteSegmento Segmento al que puede avanzar el coche (o entrar, si es el primero).
+   * @param peticionesAvanzar Array que almacena colas de cochees esperando a entrar en el siguiente segmento.
+   * @return Las colas actualizadas
    */
-  private static class EstadoCoche {
-    private Pos posicion;
-    private Integer tks;
+  private Queue<Object[]>[] actualizacion(int siguienteSegmento, Queue<Object[]>[] peticionesAvanzar) {
 
-    public EstadoCoche(Pos posicion, Integer tks) {
-      this.posicion = posicion;
-      this.tks = tks;
+    // Variables auxiliares
+    Object[] peticion;
+    int carrilLibre;
+    Pos posicion;
+    String id;
+    Integer ticks;
+    One2OneChannel canalRespuesta;
+
+    // Si no hay coches esperando a entrar al segmento, terminamos
+    if (peticionesAvanzar[siguienteSegmento].size() == 0) {
+      return peticionesAvanzar;
     }
 
-    public Pos getPosicion() {
-      return posicion;
+
+
+
+
+
+
+
+
+
+    // Si estamos en el segmento 1, entonces simplemente se deja entrar a los que quieran entrar
+    if (siguienteSegmento == 1) {
+
+      peticion = peticionesAvanzar[siguienteSegmento].poll();
+
+      // Comprobamos que carril ha quedado libre
+      carrilLibre = CarrilLibre(1);
+
+      // Asignamos la nueva posicion al coche
+      posicion = new Pos(1, carrilLibre);
+
+      // Obtenemos el id del coche
+      id = (String) peticion[1];
+
+      // Obtenemos los ticks del coche
+      ticks = (Integer) peticion[2];
+
+      // Actualizamos el estado del coche en la carretera
+      EstadoCoche estado = new EstadoCoche(posicion, ticks);
+      coches.put(id, estado);
+      carrilesOcupados[1][carrilLibre] = true;
+
+      // Obtenemos el canal de respuesta y desbloqueamos al coche
+      canalRespuesta = (One2OneChannel) peticion[0];
+      canalRespuesta.out().write(posicion);
+
+      return peticionesAvanzar;
     }
 
-    public Integer getTks() {
-      return tks;
+
+
+
+
+    // Si estamos en el segmento 1, entonces simplemente se deja entrar a los que quieran entrar
+    if (siguienteSegmento == 1) {
+
+
+
+      // Obtener el id del coche que quiere salir
+      id = (String) canalSalir.in().read();
+
+      // Eliminamos al coche de la carretera
+      int segmentoActual = coches.get(id).getPosicion().getSegmento();
+      int carrilActual = coches.get(id).getPosicion().getCarril();
+      carrilesOcupados[segmentoActual][carrilActual] = false;
+      coches.remove(id);
+
+
+      peticion = peticionesAvanzar[siguienteSegmento].poll();
+
+      // Comprobamos que carril ha quedado libre
+      carrilLibre = CarrilLibre(1);
+
+      // Asignamos la nueva posicion al coche
+      posicion = new Pos(1, carrilLibre);
+
+      // Obtenemos el id del coche
+      id = (String) peticion[1];
+
+      // Obtenemos los ticks del coche
+      ticks = (Integer) peticion[2];
+
+      // Actualizamos el estado del coche en la carretera
+      EstadoCoche estado = new EstadoCoche(posicion, ticks);
+      coches.put(id, estado);
+      carrilesOcupados[1][carrilLibre] = true;
+
+      // Obtenemos el canal de respuesta y desbloqueamos al coche
+      canalRespuesta = (One2OneChannel) peticion[0];
+      canalRespuesta.out().write(posicion);
+
+      return peticionesAvanzar;
     }
 
-    public void setPosicion(Pos posicion) {
-      this.posicion = posicion;
-    }
 
-    public void setTks(Integer tks) {
-      this.tks = tks;
-    }
+
+
+
+
+
+
+
+
+    // Caso recursivo: avazar
+
+    // Obtenemos la peticion de avanzar
+    peticion = peticionesAvanzar[siguienteSegmento].poll();
+
+    // Comprobamos que carril ha quedado libre
+    carrilLibre = CarrilLibre(siguienteSegmento);
+
+    // Asignamos la nueva posicion al coche
+    posicion = new Pos(siguienteSegmento, carrilLibre);
+
+    // Obtenemos el id del coche
+    id = (String) peticion[1];
+
+    // Obtenemos los ticks del coche
+    ticks = (Integer) peticion[2];
+
+    // Actualizamos el estado del coche en la carretera
+    coches.get(id).setPosicion(posicion);
+    coches.get(id).setTks(ticks);
+    carrilesOcupados[siguienteSegmento][carrilLibre] = true;
+    carrilesOcupados[siguienteSegmento - 1][carrilLibre] = false;
+
+    // Obtenemos el canal de respuesta y desbloqueamos al coche
+    canalRespuesta = (One2OneChannel) peticion[0];
+    canalRespuesta.out().write(posicion);
+
+    return actualizacion(siguienteSegmento - 1, peticionesAvanzar);
   }
+
+
+
+
+
+
+
+
+
+
+
+
 
   /**
    * Codigo del servidor.
    */
   public void run() {
 
-    // Cola de peticiones aplazadas para entrar, avanzar y circular
-    Queue<Object[]> peticionesEntrar = new LinkedList<>();
-    Queue<Object[]> peticionesAvanzar = new LinkedList<>();
-    Queue<Object[]> peticionesCircular = new LinkedList<>();
+    // Cola de peticiones aplazadas para entrar, avanzar, y salir (una por cada segmento)
+    // 0 --> Los que desean entrar al segmento 1
+    // 1 --> Los que desean avanzar al segmento 2
+    // 2 --> Los que desean avanzar al segmento 3
+    // ...
+    // N --> Los que desean salir
+    Queue<Object[]>[] peticionesAvanzar = new LinkedList[segmentos];
+    for (int i = 0; i < peticionesAvanzar.length; i++) {
+      peticionesAvanzar[i] = new LinkedList<>();
+    }
+
+    // Peticiones aplazadas para circular
+    HashMap<String, Object[]> peticionesCircular = new HashMap<>();
 
     // Nombres simbolicos a las posiciones de las entradas alternativas
     final int TICK = 0;
@@ -226,164 +384,123 @@ public class CarreteraCSP implements Carretera, CSProcess {
     // Servicios alternativos
     Alternative servicios = new Alternative(entradas);
 
+    // Variables auxiliares: peticion, id del coche, canal de respuesta
+    Object[] peticion;
+    String id;
+    int segmentoActual;
+    One2OneChannel canalRespuesta;
+
     // Bucle principal del servidor
     while (true) {
       switch (servicios.fairSelect()) {
 
         case TICK:
+          canalTick.in().read();
 
           // Para cada coche en la carretera
-          for (EstadoCoche coche : coches.values()) {
+          for (Map.Entry<String, EstadoCoche> coche : coches.entrySet()) {
 
-            // Si el coche tiene mas de 0 ticks
-            if (coche.getTks() > 0) {
+            // Si el coche tiene mas de 1 tick
+            if (coche.getValue().getTks() > 1) {
 
               // Actualizamos el numero de ticks (uno menos)
-              coche.setTks(coche.getTks() - 1);
+              coche.getValue().setTks(coche.getValue().getTks() - 1);
+            }
 
+            // Si el coche tiene 1 tick, desbloqueamos de circulando
+            if (coche.getValue().getTks() == 1) {
+              canalRespuesta = (One2OneChannel) peticionesCircular.get(coche.getKey())[0];
+              canalRespuesta.out().write(null);
             }
           }
 
-          canalTick.in().read();
-          break;
-
-        case SALIR:
-
-          // Obtener el id del coche que quiere salir
-          String id = (String) canalSalir.in().read();
-
-          // Eliminamos al coche de la carretera
-          int segmentoActual = coches.get(id).getPosicion().getSegmento();
-          int carrilActual = coches.get(id).getPosicion().getCarril();
-          carrilesOcupados[segmentoActual][carrilActual] = false;
-          coches.remove(id);
-          break;
-
-        case ENTRAR:
-
-          // Aplazamos la peticion de entrada
-          peticionesEntrar.add((Object[]) canalEntrar.in().read());
           break;
 
         case CIRCULAR:
 
+          // Obtenemos la peticion
+          peticion = (Object[]) canalEntrar.in().read();
+          id = (String) peticion[1];
+
           // Aplazamos la peticion de circular
-          peticionesCircular.add((Object[]) canalCircular.in().read());
+          peticionesCircular.put(id, peticion);
+          break;
+
+        case ENTRAR:
+
+          // Obtenemos la peticion
+          peticion = (Object[]) canalEntrar.in().read();
+
+          // Aplazamos la peticion de entrada
+          peticionesAvanzar[0].add(peticion);
           break;
 
         case AVANZAR:
+          // Obtenemos la peticion
+          peticion = (Object[]) canalAvanzar.in().read();
 
-          // Aplazamos la peticion de avanzar
-          peticionesAvanzar.add((Object[]) canalAvanzar.in().read());
+          // Obtenemos el id del coche
+          id = (String) peticion[1];
+
+          segmentoActual = coches.get(id).getPosicion().getSegmento();
+
+          // Aplazamos la peticion de entrada
+          peticionesAvanzar[segmentoActual].add(peticion);
           break;
-      }
 
+        case SALIR:
 
+          // Obtenemos el id del coche que quiere salir
+          peticion = (Object[]) canalSalir.in().read();
 
+          // Obtenemos el id del coche
+          id = (String) peticion[1];
 
-      // Variables auxiliares: peticion, id del coche, canal de respuesta, y tamaño de la cola
-      Object[] peticion;
-      String id;
-      One2OneChannel canalRespuesta;
+          segmentoActual = coches.get(id).getPosicion().getSegmento();
 
-      // Ejecutamos, si se puede, alguna de las peticiones aplazadas de entrar
-      int sizeCola = peticionesEntrar.size();
-      for (int i = 0; i < sizeCola; i++) {
-
-        // Obtenemos la primera peticion de la cola
-        peticion = peticionesEntrar.poll();
-
-        // Obtenemos el id del coche
-        id = (String) peticion[1];
-
-        // Si hay hueco en el primer segmento, entramos
-        int carrilLibre = CarrilLibre(1);
-        if (carrilLibre != 0) {
-
-          // Asignamos la nueva posicion al coche
-          Pos posicion = new Pos(1, carrilLibre);
-
-          // Obtenemos los ticks del coche
-          Integer ticks = (Integer) peticion[2];
-
-          // Actualizamos el estado del coche en la carretera
-          EstadoCoche estado = new EstadoCoche(posicion, ticks);
-          coches.put(id, estado);
-          carrilesOcupados[1][carrilLibre] = true;
-
-          // Obtenemos el canal de respuesta y desbloqueamos al coche
-          canalRespuesta = (One2OneChannel) peticion[0];
-          canalRespuesta.out().write(posicion);
-        }
-
-        // Sino, reintroducimos al coche en la cola de peticiones
-        else {
-          peticionesEntrar.add(peticion);
-        }
-      }
-
-      // Ejecutamos, si se puede, alguna de las peticiones aplazadas de avanzar
-      sizeCola = peticionesAvanzar.size();
-      for (int i = 0; i < sizeCola; i++) {
-
-        // Obtenemos la primera peticion de la cola
-        peticion = peticionesAvanzar.poll();
-
-        // Obtenemos el id del coche
-        id = (String) peticion[1];
-
-        // Obtenemos el siguiente segmento al que quiere avanzar el coche
-        int siguienteSegmento = coches.get(id).getPosicion().getSegmento() + 1;
-
-        // Si hay hueco en el siguiente segmento, entramos
-        int carrilLibre = CarrilLibre(siguienteSegmento);
-        if (carrilLibre != 0) {
-
-          // Asignamos la nueva posicion al coche
-          Pos posicion = new Pos(siguienteSegmento, carrilLibre);
-
-          // Obtenemos los ticks del coche
-          Integer ticks = (Integer) peticion[2];
-
-          // Actualizamos el estado del coche en la carretera
-          coches.get(id).setPosicion(posicion);
-          coches.get(id).setTks(ticks);
-          carrilesOcupados[siguienteSegmento][carrilLibre] = true;
-          carrilesOcupados[siguienteSegmento - 1][carrilLibre] = false;
-
-
-          // Obtenemos el canal de respuesta y desbloqueamos al coche
-          canalRespuesta = (One2OneChannel) peticion[0];
-          canalRespuesta.out().write(posicion);
-        }
-
-        // Sino, reintroducimos al coche en la cola de peticiones
-        else {
-          peticionesAvanzar.add(peticion);
-        }
-      }
-
-      // Comprobamos si alguno de los coches ya puede circular
-      sizeCola = peticionesCircular.size();
-      for (int i = 0; i < sizeCola; i++) {
-
-        // Obtenemos la primera peticion de la cola
-        peticion = peticionesCircular.poll();
-
-        // Obtenemos el id del coche
-        id = (String) peticion[1];
-
-        // Si el numero de ticks del coche es igual a cero, lo liberamos
-        if (coches.get(id).getTks() == 0) {
-          canalRespuesta = (One2OneChannel) peticion[0];
-          canalRespuesta.out().write(null);
-        }
-
-        // Sino, reintroducimos al coche en la cola de peticiones
-        else {
-          peticionesCircular.add(peticion);
-        }
+          // Aplazamos la peticion de entrada
+          peticionesAvanzar[segmentoActual].add(peticion);
+          break;
       }
     }
   }
+
+  /**
+   * Clase que guarda el estado de un coche dentro de la carretera:
+   * - Posicion: la posicion del coche en la carretera
+   * - Tks: numero de ticks que tiene el coche actualmente
+   * - canalRespuesta: canal de respuesta de la peticion
+   */
+  private static class EstadoCoche {
+    private Pos posicion;
+    private Integer tks;
+    private One2OneChannel canalRespuesta;
+
+    public EstadoCoche(Pos posicion, Integer tks, One2OneChannel canalRespuesta) {
+      this.posicion = posicion;
+      this.tks = tks;
+      this.canalRespuesta = canalRespuesta;
+    }
+
+    public Pos getPosicion() {
+      return posicion;
+    }
+
+    public Integer getTks() {
+      return tks;
+    }
+
+    public One2OneChannel getCanalRespuesta() {
+      return canalRespuesta;
+    }
+
+    public void setPosicion(Pos posicion) {
+      this.posicion = posicion;
+    }
+
+    public void setTks(Integer tks) {
+      this.tks = tks;
+    }
+  }
+
 }
