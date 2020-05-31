@@ -71,12 +71,12 @@ public class CarreteraMonitor implements Carretera {
     mutex.enter();
 
     // Si no hay hueco en el primer carril, esperamos
-    if (CarrilLibre(1) == 0) {
+    if (carrilLibre(1) == 0) {
       condicionesAvanzar[1].await();
     }
 
     // Comprobamos cual es el carril libre y asignamos la nueva posicion al coche
-    int carrilLibre = CarrilLibre(1);
+    int carrilLibre = carrilLibre(1);
     Pos posicion = new Pos(1, carrilLibre);
 
     // Asignamos un monitor al coche para bloquearlo cuando este circulando
@@ -107,12 +107,12 @@ public class CarreteraMonitor implements Carretera {
 
     // Si no hay hueco en el siguiente carril, esperamos
     int siguienteSegmento = coches.get(id).getPosicion().getSegmento() + 1;
-    if (CarrilLibre(siguienteSegmento) == 0) {
+    if (carrilLibre(siguienteSegmento) == 0) {
       condicionesAvanzar[siguienteSegmento].await();
     }
 
     // Comprobamos cual es el carril libre y asignamos la nueva posicion al coche
-    int carrilLibre = CarrilLibre(siguienteSegmento);
+    int carrilLibre = carrilLibre(siguienteSegmento);
     Pos posicion = new Pos(siguienteSegmento, carrilLibre);
 
     // Actualizamos el estado del coche en la carretera
@@ -210,7 +210,7 @@ public class CarreteraMonitor implements Carretera {
    * @return El numero del primer carril libre.
    *         Si no hay carril libre, devuelve 0.
    */
-  private Integer CarrilLibre(Integer segmento) {
+  private Integer carrilLibre(Integer segmento) {
     int carrilLibre = 0;
     for (int carril = 1; carril <= carriles; carril++) {
       if (!carrilesOcupados[segmento][carril]) {
