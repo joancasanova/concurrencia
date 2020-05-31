@@ -218,7 +218,7 @@ public class CarreteraCSP implements Carretera, CSProcess {
 
         case ENTRAR:
           // Obtenemos la peticion
-          peticion = (Peticion) canalAvanzar.in().read();
+          peticion = (Peticion) canalEntrar.in().read();
 
           // Colocamos la peticion en la cola de los que quieren entrar
           colasPeticiones[0].add(peticion);
@@ -241,7 +241,7 @@ public class CarreteraCSP implements Carretera, CSProcess {
 
         case SALIR:
           // Obtenemos la peticion
-          peticion = (Peticion) canalAvanzar.in().read();
+          peticion = (Peticion) canalSalir.in().read();
 
           // Colocamos la peticion en la cola de los que quieren salir
           colasPeticiones[segmentos].add(peticion);
