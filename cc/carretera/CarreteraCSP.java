@@ -182,6 +182,7 @@ public class CarreteraCSP implements Carretera, CSProcess {
     Alternative servicios = new Alternative(entradas);
 
     // Bucle principal del servidor
+    Peticion peticion;
     while (true) {
       switch (servicios.fairSelect()) {
 
@@ -208,7 +209,7 @@ public class CarreteraCSP implements Carretera, CSProcess {
 
         case CIRCULAR:
           // Obtenemos la peticion
-          Peticion peticion = (Peticion) canalCircular.in().read();
+          peticion = (Peticion) canalCircular.in().read();
           String id = peticion.getId();
 
           // Aplazamos la peticion de circular
@@ -216,42 +217,40 @@ public class CarreteraCSP implements Carretera, CSProcess {
           break;
 
         case ENTRAR:
+          // Obtenemos la peticion
+          peticion = (Peticion) canalAvanzar.in().read();
+
+          // Colocamos la peticion en la cola de los que quieren entrar
+          colasPeticiones[0].add(peticion);
+
           // Actualizamos el estado de la carretera y las colas de peticiones
-          colasPeticiones = procesarPeticion((Peticion) canalEntrar.in().read(), colasPeticiones);
+          colasPeticiones = actualizacion(0, colasPeticiones);
           break;
 
         case AVANZAR:
+          // Obtenemos la peticion y el segmento actual desde el que se avanza
+          peticion = (Peticion) canalAvanzar.in().read();
+          int segmentoActual = coches.get(peticion.getId()).getPosicion().getSegmento();
+
+          // Colocamos la peticion en su cola correspondiente
+          colasPeticiones[segmentoActual].add(peticion);
+
           // Actualizamos el estado de la carretera y las colas de peticiones
-          colasPeticiones = procesarPeticion((Peticion) canalAvanzar.in().read(), colasPeticiones);
+          colasPeticiones = actualizacion(segmentoActual, colasPeticiones);
           break;
 
         case SALIR:
+          // Obtenemos la peticion
+          peticion = (Peticion) canalAvanzar.in().read();
+
+          // Colocamos la peticion en la cola de los que quieren salir
+          colasPeticiones[segmentos].add(peticion);
+
           // Actualizamos el estado de la carretera y las colas de peticiones
-          colasPeticiones = procesarPeticion((Peticion) canalSalir.in().read(), colasPeticiones);
+          colasPeticiones = actualizacion(segmentos, colasPeticiones);
           break;
       }
     }
-  }
-
-  /**
-   * Metodo que procesa una peticion de entrar, avanzar o salir.
-   *
-   * Este método no incumple la regla de cambiar el estado del recurso exclusivamente desde dentro del servidor,
-   * ya que solo se invoca desde dentro del servidor.
-   */
-  private Queue<Peticion>[] procesarPeticion(Peticion peticion, Queue<Peticion>[] colasPeticiones) {
-
-    // Obtenemos el segmento actual del coche
-    int segmentoActual = 0;
-    if (coches.containsKey(peticion.getId())) {
-      segmentoActual = coches.get(peticion.getId()).getPosicion().getSegmento();
-    }
-
-    // Aplazamos la peticion de entrada
-    colasPeticiones[segmentoActual].add(peticion);
-
-    // Actualizamos el estado de la carretera y las colas de peticiones
-    return actualizacion(segmentoActual, colasPeticiones);
   }
 
   /**
